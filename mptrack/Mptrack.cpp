@@ -33,6 +33,9 @@
 #include "../sounddev/SoundDeviceManager.h"
 #include "../soundlib/plugins/PluginManager.h"
 #include "MPTrackWine.h"
+#include "../common/mptPathString.h"
+#include "../common/mptFileIO.h"
+#include "ModuleDiffing.h"
 
 #ifdef MPT_WITH_GDIPLUS
 #define max(a,b) (((a) > (b)) ? (a) : (b))
@@ -131,7 +134,8 @@ class CMPTCommandLineInfo: public CCommandLineInfo
 {
 public:
 	bool m_bNoDls = false, m_bNoPlugins = false, m_bNoAssembly = false, m_bNoSysCheck = false, m_bNoWine = false,
-		 m_bPortable = false, m_bNoCrashHandler = false, m_bDebugCrashHandler = false;
+		 m_bPortable = false, m_bNoCrashHandler = false, m_bDebugCrashHandler = false, m_bDiffCompute = false;
+	std::vector<mpt::PathString> m_contDiffPaths;
 #ifdef _DEBUG
 	bool m_bNoTests = false;
 #endif
@@ -147,6 +151,7 @@ public:
 			if (!lstrcmpi(lpszParam, _T("portable"))) { m_bPortable = true; return; }
 			if (!lstrcmpi(lpszParam, _T("fullMemDump"))) { ExceptionHandler::fullMemDump = true; return; }
 			if (!lstrcmpi(lpszParam, _T("noAssembly"))) { m_bNoAssembly = true; return; }
+			if (!lstrcmpi(lpszParam, _T("diff"))) { m_bDiffCompute = true; m_bShowSplash = FALSE; return; }
 			if (!lstrcmpi(lpszParam, _T("noSysCheck"))) { m_bNoSysCheck = true; return; }
 			if (!lstrcmpi(lpszParam, _T("noWine"))) { m_bNoWine = true; return; }
 			if (!lstrcmpi(lpszParam, _T("noCrashHandler"))) { m_bNoCrashHandler = true; return; }
@@ -155,7 +160,13 @@ public:
 			if (!lstrcmpi(lpszParam, _T("noTests"))) { m_bNoTests = true; return; }
 #endif
 		}
-		CCommandLineInfo::ParseParam(lpszParam, bFlag, bLast);
+		if (m_bDiffCompute)
+		{
+			if (lpszParam)
+				m_contDiffPaths.push_back(mpt::PathString::FromCString(lpszParam));
+		}
+		else // CCommandLineInfo::ParseParam may set m_bShowSplash to TRUE so avoid calling it when diffing.
+			CCommandLineInfo::ParseParam(lpszParam, bFlag, bLast);
 	}
 };
 
@@ -967,6 +978,71 @@ BOOL CTrackApp::InitInstanceImpl(CMPTCommandLineInfo &cmdInfo)
 
 	// load components
 	ComponentManager::Instance()->Startup();
+
+	// Diffing.
+	if (cmdInfo.m_bDiffCompute)
+	{
+		if (cmdInfo.m_contDiffPaths.size() < 3)
+		{
+			Reporting::Warning("Insufficient number of parameters given, no diff will be created.");
+			ExitInstance();
+			ExitProcess(255);
+		}
+
+		const auto& sTextDiffAppPath = cmdInfo.m_contDiffPaths[0];
+		const auto& sModulePathLeft = cmdInfo.m_contDiffPaths[1];
+		const auto& sModulePathRight = cmdInfo.m_contDiffPaths[2];
+
+		const auto sTextFilePathLeft = mpt::CreateTempFileName(sModulePathLeft.GetFullFileName());
+		const auto sTextFilePathRight = mpt::CreateTempFileName(sModulePathRight.GetFullFileName());
+
+		DWORD exitCode = 0;
+
+		// Scope for automatic temporary file handling.
+		{
+			mpt::TempFileGuard leftFileTempGuard(sTextFilePathLeft);
+			mpt::TempFileGuard rightFileTempGuard(sTextFilePathRight);
+			// Scope for streams to make sure that streams get flushed and closed before calling the diff-viewer.
+			{
+				mpt::ofstream ostrmLeftText(leftFileTempGuard.GetFilename());
+				mpt::ofstream ostrmRightText(rightFileTempGuard.GetFilename());
+				ModuleToDiffableText(sModulePathLeft, ostrmLeftText);
+				ModuleToDiffableText(sModulePathRight, ostrmRightText);
+			}
+
+			STARTUPINFOW info;
+			MemsetZero(info);
+			info.cb = sizeof(info);
+			info.wShowWindow = SW_SHOWMAXIMIZED;
+			PROCESS_INFORMATION processInfo;
+			MemsetZero(processInfo);
+
+			std::wstring sCommandLine = mpt::format(L"\"%1\" \"%2\" \"%3\"")(sTextDiffAppPath.ToWide(), sTextFilePathLeft.ToWide(), sTextFilePathRight.ToWide());
+			if (!CreateProcessW(NULL,
+				&sCommandLine[0], // Note: This may get modified so can't use c_str() that returns const.
+				NULL,
+				NULL,
+				FALSE,
+				DETACHED_PROCESS /*TODO: check this*/,
+				NULL,
+				NULL,
+				&info,
+				&processInfo))
+			{
+				// Failed to lauch diff viewer.
+				ExitInstance();
+				ExitProcess(255);
+			}
+
+			// Wait until the diff viewer process exits.
+			WaitForSingleObject(processInfo.hProcess, INFINITE);
+
+			VERIFY(GetExitCodeProcess(processInfo.hProcess, &exitCode));
+			ExitInstance();
+		}
+		
+		ExitProcess(exitCode);
+	}
 
 	// Wine Support
 	if(mpt::Windows::IsWine())

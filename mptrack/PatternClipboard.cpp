@@ -161,7 +161,7 @@ bool PatternClipboard::Copy(const CSoundFile &sndFile, PATTERNINDEX pattern, Pat
 
 
 // Create the clipboard text for a pattern selection
-std::string PatternClipboard::CreateClipboardString(const CSoundFile &sndFile, PATTERNINDEX pattern, PatternRect selection)
+std::string PatternClipboard::CreateClipboardString(const CSoundFile &sndFile, PATTERNINDEX pattern, PatternRect selection, const char *eol)
 {
 	if(!sndFile.Patterns.IsValidPat(pattern))
 		return "";
@@ -284,7 +284,7 @@ std::string PatternClipboard::CreateClipboardString(const CSoundFile &sndFile, P
 		}
 
 		// Next Row
-		data += "\r\n";
+		data += eol;
 	}
 
 	return data;

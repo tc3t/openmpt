@@ -783,6 +783,7 @@
     <ClInclude Include="..\..\mptrack\MIDIMacroDialog.h" />
     <ClInclude Include="..\..\mptrack\MIDIMapping.h" />
     <ClInclude Include="..\..\mptrack\MIDIMappingDialog.h" />
+    <ClInclude Include="..\..\mptrack\ModuleDiffing.h" />
     <ClInclude Include="..\..\mptrack\MPTrackUtil.h" />
     <ClInclude Include="..\..\mptrack\MPTrackUtilWine.h" />
     <ClInclude Include="..\..\mptrack\MPTrackWine.h" />
@@ -1006,6 +1007,7 @@
     <ClCompile Include="..\..\mptrack\MIDIMacroDialog.cpp" />
     <ClCompile Include="..\..\mptrack\MIDIMapping.cpp" />
     <ClCompile Include="..\..\mptrack\MIDIMappingDialog.cpp" />
+    <ClCompile Include="..\..\mptrack\ModuleDiffing.cpp" />
     <ClCompile Include="..\..\mptrack\MPTHacks.cpp" />
     <ClCompile Include="..\..\mptrack\MPTrackLink.cpp" />
     <ClCompile Include="..\..\mptrack\MPTrackUtil.cpp" />

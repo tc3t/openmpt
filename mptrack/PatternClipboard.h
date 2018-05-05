@@ -82,15 +82,14 @@ public:
 	static clipindex_t GetClipboardSize() { return instance.clipboards.size(); };
 	// Check whether patterns can be pasted from clipboard
 	static bool CanPaste();
+    // Create the clipboard text for a pattern selection
+    static std::string CreateClipboardString(const CSoundFile &sndFile, PATTERNINDEX pattern, PatternRect selection, const char *eol = "\r\n");
 
 protected:
 
 	PatternClipboard() : activeClipboard(0) { SetClipboardSize(1); };
 
 	static std::string GetFileExtension(const char *ext, bool addPadding);
-
-	// Create the clipboard text for a pattern selection
-	static std::string CreateClipboardString(const CSoundFile &sndFile, PATTERNINDEX pattern, PatternRect selection);
 
 	// Parse clipboard string and perform the pasting operation.
 	static bool HandlePaste(CSoundFile &sndFile, ModCommandPos &pastePos, PasteModes mode, const std::string &data, ORDERINDEX curOrder, PatternRect &pasteRect, bool &orderChanged);
