@@ -2,6 +2,23 @@
 README
 ======
 
+Fork-specific notes
+===================
+
+* This fork introduces ability to compare module files using mptrack.exe and existing merge tool.
+  * NOTE: implementation is to be considered demonstration-quality and is not recommended for general use.
+* Example how to diff modules from command line using existing TortoiseMerge installation:
+  * mptrack.exe /diff "C:\Program Files\TortoiseSVN\bin\TortoiseMerge.exe" "c:\modules\module_v1.mptm" "c:\modules\module_v2.mptm"
+* Example how to configure TortoiseSVN to use mptrack.exe to diff module files:
+  * Open TortoiseSVN settings (e.g. by right clicking arbitrary file and choosing TortoiseSVN -> Settings)
+  * From tree menu, choose 'Diff Viewer'
+  * Click 'Advanced...'
+  * Click 'Add...'
+    * To 'Filename, extension or mime-type', set e.g. '.mptm'
+    * To 'External Program', set: "\<path\>\mptrack.exe" /diff "C:\Program Files\TortoiseSVN\bin\TortoiseMerge.exe" %base %mine
+
+
+
 OpenMPT and libopenmpt
 ======================
 
